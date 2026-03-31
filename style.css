@@ -515,6 +515,18 @@ body.theme-noir .msg-item.mine {
 	word-break: break-word;
 }
 
+.msg-body code {
+	padding: 0.08rem 0.36rem;
+	border-radius: 6px;
+	font-family: "Consolas", "Courier New", monospace;
+	background: rgba(0, 0, 0, 0.06);
+	font-size: 0.9em;
+}
+
+body.theme-noir .msg-body code {
+	background: rgba(255, 255, 255, 0.12);
+}
+
 .msg-item.is-deleted .msg-body {
 	font-style: italic;
 	color: var(--muted);
@@ -569,6 +581,28 @@ body.theme-noir .msg-action {
 .composer-wrap {
 	border-top: 1px solid var(--line);
 	padding: 0.9rem;
+}
+
+.reply-preview {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.55rem 0.66rem;
+	border: 1px dashed var(--line);
+	border-radius: 10px;
+	margin-bottom: 0.65rem;
+	background: #fff8ee;
+}
+
+body.theme-noir .reply-preview {
+	background: #251f1b;
+}
+
+.reply-preview p {
+	margin: 0;
+	font-size: 0.86rem;
+	color: var(--muted);
 }
 
 .composer-form {
@@ -642,6 +676,29 @@ body.theme-noir .empty-feed-hint {
 	min-height: 1.2rem;
 	color: var(--accent-strong);
 	font-size: 0.84rem;
+}
+
+#presenceStatus {
+	min-height: 1.1rem;
+	font-size: 0.82rem;
+}
+
+body.compact-mode .chat-feed {
+	gap: 0.45rem;
+	padding: 0.7rem;
+}
+
+body.compact-mode .msg-item {
+	padding: 0.5rem 0.62rem;
+	border-radius: 10px;
+}
+
+body.compact-mode .msg-actions {
+	margin-top: 0.24rem;
+}
+
+body.compact-mode .msg-time {
+	margin-top: 0.2rem;
 }
 
 .status-error {

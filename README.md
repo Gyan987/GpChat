@@ -9,6 +9,11 @@ GpChat is a Supabase-powered realtime chat app with:
 - Search and mine-only filters
 - Pinned messages per room
 - Theme and sound preferences
+- Online presence status
+- Reply-to messages
+- Transcript export
+- Compact mode toggle
+- Lightweight formatting (`**bold**`, `*italic*`, `` `code` ``)
 
 ## 1) Database setup
 
@@ -32,4 +37,4 @@ Example with VS Code Live Server or any static file server:
 
 - If your table does not include advanced columns (`room`, `updated_at`, `is_deleted`), the app falls back to compatibility mode.
 - Full features require the schema from `supabase_setup.sql`.
-- Slash commands: `/clear`, `/theme`, `/shrug`, `/me text`, `/room global|dev|random`.
+- Slash commands: `/help`, `/clear`, `/theme`, `/compact`, `/export`, `/shrug`, `/me text`, `/room global|dev|random`.

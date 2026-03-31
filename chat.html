@@ -41,6 +41,8 @@
 
       <div class="sidebar-panel">
         <p class="panel-title">Quick Actions</p>
+        <button class="btn btn-ghost btn-full" id="exportChatBtn" type="button">Export transcript</button>
+        <button class="btn btn-ghost btn-full" id="compactModeBtn" type="button">Compact mode off</button>
         <button class="btn btn-ghost btn-full" id="clearLocalViewBtn" type="button">Clear local view</button>
         <button class="btn btn-danger btn-full" id="logoutBtn" type="button">Logout</button>
       </div>
@@ -53,6 +55,7 @@
           <p id="liveStatus" class="status-text">Connecting...</p>
           <p id="messageStats" class="status-text">0 visible messages</p>
           <p id="typingStatus" class="status-text"></p>
+          <p id="presenceStatus" class="status-text"></p>
         </div>
         <div class="chat-toolbar">
           <input id="searchInput" type="search" placeholder="Search messages or people..." aria-label="Search messages">
@@ -70,6 +73,10 @@
       </section>
 
       <footer class="composer-wrap">
+        <div id="replyPreview" class="reply-preview" hidden>
+          <p id="replyPreviewText"></p>
+          <button class="btn btn-ghost" id="cancelReplyBtn" type="button">Cancel</button>
+        </div>
         <form id="composerForm" class="composer-form">
           <textarea id="msg" rows="1" maxlength="1000" placeholder="Share something brilliant..." required></textarea>
           <button class="btn btn-primary" id="sendBtn" type="submit">Send</button>

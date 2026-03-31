@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
 	draft: "gpchat_draft",
 	pinnedByRoom: "gpchat_pinned_by_room",
 	room: "gpchat_room",
+	compact: "gpchat_compact_mode",
 };
 
 const ROOM_LABELS = {
@@ -198,9 +199,15 @@ async function initializeChatPage() {
 	const avatarBadge = document.getElementById("avatarBadge");
 	const clearLocalViewBtn = document.getElementById("clearLocalViewBtn");
 	const logoutBtn = document.getElementById("logoutBtn");
+	const exportChatBtn = document.getElementById("exportChatBtn");
+	const compactModeBtn = document.getElementById("compactModeBtn");
 	const roomList = document.getElementById("roomList");
 	const activeRoomLabel = document.getElementById("activeRoomLabel");
 	const chatRoomHeading = document.getElementById("chatRoomHeading");
+	const presenceStatus = document.getElementById("presenceStatus");
+	const replyPreview = document.getElementById("replyPreview");
+	const replyPreviewText = document.getElementById("replyPreviewText");
+	const cancelReplyBtn = document.getElementById("cancelReplyBtn");
 
 	if (!chatBox || !msgInput || !composerForm || !roomList) {
 		return;
@@ -228,12 +235,18 @@ async function initializeChatPage() {
 	let supportsRoomColumn = true;
 	let supportsMessageLifecycleColumns = true;
 	let soundEnabled = safeStorageGet(STORAGE_KEYS.sound, "on") !== "off";
+	let compactModeEnabled = safeStorageGet(STORAGE_KEYS.compact, "off") === "on";
 	let unreadCount = 0;
 	let audioContext;
 	let currentTheme = safeStorageGet(STORAGE_KEYS.theme, "sunrise") === "noir" ? "noir" : "sunrise";
 	let typingDebounceId;
 	let typingClearId;
 	const remoteTypingMap = new Map();
+	const replyState = {
+		messageId: null,
+		userEmail: "",
+		snippet: "",
+	};
 
 	const renderedMessageIds = new Set();
 	const messageDataById = new Map();
@@ -243,6 +256,7 @@ async function initializeChatPage() {
 
 	themeToggleBtn.textContent = currentTheme === "noir" ? "Sunrise" : "Noir";
 	soundToggleBtn.textContent = soundEnabled ? "Sound On" : "Sound Off";
+	applyCompactMode(compactModeEnabled, compactModeBtn);
 
 	const roomState = {
 		current: currentRoom,
@@ -275,6 +289,46 @@ async function initializeChatPage() {
 		}
 
 		typingStatus.textContent = `${activeUsers.length} people are typing...`;
+	};
+
+	const updatePresenceStatus = () => {
+		if (!presenceStatus) {
+			return;
+		}
+
+		const presence = channel.presenceState();
+		const onlineCount = Object.keys(presence).length;
+		presenceStatus.textContent = onlineCount > 0 ? `${onlineCount} online now` : "No one online";
+	};
+
+	const clearReplyState = () => {
+		replyState.messageId = null;
+		replyState.userEmail = "";
+		replyState.snippet = "";
+		if (replyPreview) {
+			replyPreview.hidden = true;
+		}
+		if (replyPreviewText) {
+			replyPreviewText.textContent = "";
+		}
+	};
+
+	const setReplyState = (message) => {
+		if (!message) {
+			clearReplyState();
+			return;
+		}
+
+		replyState.messageId = message.id;
+		replyState.userEmail = message.user_email;
+		replyState.snippet = truncateText(getMessageDisplayText(message), 84);
+		if (replyPreviewText) {
+			replyPreviewText.textContent = `Replying to ${getShortNameFromEmail(message.user_email)}: ${replyState.snippet}`;
+		}
+		if (replyPreview) {
+			replyPreview.hidden = false;
+		}
+		msgInput.focus();
 	};
 
 	const updateStats = () => {
@@ -396,6 +450,7 @@ async function initializeChatPage() {
 		if (ts) {
 			const editedLabel = data.updated_at ? " (edited)" : "";
 			ts.textContent = `${formatTime(data.created_at)}${editedLabel}`;
+			ts.title = new Date(data.created_at).toLocaleString();
 		}
 
 		const editButton = element.querySelector("[data-action='edit']");
@@ -453,6 +508,12 @@ async function initializeChatPage() {
 		copyButton.dataset.action = "copy";
 		copyButton.textContent = "Copy";
 
+		const replyButton = document.createElement("button");
+		replyButton.type = "button";
+		replyButton.className = "msg-action";
+		replyButton.dataset.action = "reply";
+		replyButton.textContent = "Reply";
+
 		const editButton = document.createElement("button");
 		editButton.type = "button";
 		editButton.className = "msg-action";
@@ -467,6 +528,7 @@ async function initializeChatPage() {
 
 		actionRow.appendChild(pinButton);
 		actionRow.appendChild(copyButton);
+		actionRow.appendChild(replyButton);
 		actionRow.appendChild(editButton);
 		actionRow.appendChild(deleteButton);
 
@@ -497,6 +559,11 @@ async function initializeChatPage() {
 			if (actionButton.dataset.action === "copy") {
 				await copyText(getMessageDisplayText(messageDataById.get(messageId)));
 				setStatus(liveStatus, "Message copied to clipboard.");
+				return;
+			}
+
+			if (actionButton.dataset.action === "reply") {
+				setReplyState(messageDataById.get(messageId));
 				return;
 			}
 
@@ -679,7 +746,38 @@ async function initializeChatPage() {
 		}
 		applyFilters();
 		renderPinnedBoard();
+		if (replyState.messageId === messageId) {
+			clearReplyState();
+		}
 		setStatus(liveStatus, "Message deleted.");
+	};
+
+	const exportTranscript = () => {
+		const rows = Array.from(messageDataById.values())
+			.filter((msg) => isMessageInCurrentRoom(msg, roomState.current, supportsRoomColumn))
+			.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+			.map((msg) => {
+				const sender = msg.user_email === currentUser.email ? "You" : getShortNameFromEmail(msg.user_email);
+				return `[${new Date(msg.created_at).toLocaleString()}] ${sender}: ${getMessageDisplayText(msg)}`;
+			});
+
+		if (!rows.length) {
+			setStatus(liveStatus, "No messages to export in this room.", true);
+			return;
+		}
+
+		const fileBody = rows.join("\n");
+		const blob = new Blob([fileBody], { type: "text/plain;charset=utf-8" });
+		const link = document.createElement("a");
+		const roomLabel = roomState.current;
+		const fileDate = new Date().toISOString().slice(0, 10);
+		link.href = URL.createObjectURL(blob);
+		link.download = `gpchat-${roomLabel}-${fileDate}.txt`;
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		URL.revokeObjectURL(link.href);
+		setStatus(liveStatus, "Transcript exported.");
 	};
 
 	const setRoomUi = (room) => {
@@ -772,6 +870,23 @@ async function initializeChatPage() {
 			return true;
 		}
 
+		if (message === "/help") {
+			setStatus(liveStatus, "Commands: /clear /theme /shrug /me /room /compact /export", false);
+			return true;
+		}
+
+		if (message === "/compact") {
+			compactModeEnabled = !compactModeEnabled;
+			applyCompactMode(compactModeEnabled, compactModeBtn);
+			setStatus(liveStatus, compactModeEnabled ? "Compact mode enabled." : "Compact mode disabled.");
+			return true;
+		}
+
+		if (message === "/export") {
+			exportTranscript();
+			return true;
+		}
+
 		if (message === "/shrug") {
 			msgInput.value = "\\_(o_o)_/";
 			autoGrowTextarea(msgInput);
@@ -793,7 +908,7 @@ async function initializeChatPage() {
 			return true;
 		}
 
-		setStatus(liveStatus, "Unknown command. Try /clear, /theme, /shrug, /me, or /room", true);
+		setStatus(liveStatus, "Unknown command. Try /help for available commands.", true);
 		return true;
 	};
 
@@ -828,9 +943,14 @@ async function initializeChatPage() {
 		}
 
 		setStatus(liveStatus, "Sending message...");
+		let formattedMessage = message;
+		if (replyState.messageId && replyState.userEmail) {
+			formattedMessage = `↪ @${getShortNameFromEmail(replyState.userEmail)}: ${replyState.snippet}\n${message}`;
+		}
+
 		const payload = {
 			user_email: currentUser.email,
-			message,
+			message: formattedMessage,
 		};
 		if (supportsRoomColumn) {
 			payload.room = roomState.current;
@@ -848,6 +968,7 @@ async function initializeChatPage() {
 
 		msgInput.value = "";
 		safeStorageRemove(getDraftStorageKey(roomState.current));
+		clearReplyState();
 		autoGrowTextarea(msgInput);
 		updateCharCounter(msgInput, charCounter);
 		setStatus(liveStatus, "Delivered.");
@@ -855,6 +976,9 @@ async function initializeChatPage() {
 
 	const channel = supabase
 		.channel("gpchat-main")
+		.on("presence", { event: "sync" }, () => {
+			updatePresenceStatus();
+		})
 		.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
 			appendOrUpdateMessage(payload.new);
 		})
@@ -886,6 +1010,7 @@ async function initializeChatPage() {
 		.subscribe((status) => {
 			if (status === "SUBSCRIBED") {
 				setStatus(liveStatus, `Connected to ${ROOM_LABELS[roomState.current]}. Live updates enabled.`);
+				channel.track({ user_email: currentUser.email, online_at: new Date().toISOString() });
 			}
 		});
 
@@ -929,6 +1054,10 @@ async function initializeChatPage() {
 		typingDebounceId = window.setTimeout(sendTypingEvent, 150);
 	});
 
+	cancelReplyBtn?.addEventListener("click", () => {
+		clearReplyState();
+	});
+
 	searchInput.addEventListener("input", applyFilters);
 	mineOnlyToggle.addEventListener("change", applyFilters);
 
@@ -936,6 +1065,15 @@ async function initializeChatPage() {
 		currentTheme = currentTheme === "noir" ? "sunrise" : "noir";
 		applyTheme(currentTheme);
 		themeToggleBtn.textContent = currentTheme === "noir" ? "Sunrise" : "Noir";
+	});
+
+	compactModeBtn?.addEventListener("click", () => {
+		compactModeEnabled = !compactModeEnabled;
+		applyCompactMode(compactModeEnabled, compactModeBtn);
+	});
+
+	exportChatBtn?.addEventListener("click", () => {
+		exportTranscript();
 	});
 
 	soundToggleBtn.addEventListener("click", () => {
@@ -971,6 +1109,7 @@ async function initializeChatPage() {
 		clearMessageCollection();
 		updateStats();
 		renderPinnedBoard();
+		clearReplyState();
 		setStatus(liveStatus, "Local view cleared. New and reloaded messages will appear.");
 	});
 
@@ -1054,32 +1193,21 @@ function copyText(value) {
 }
 
 function setMessageBody(element, text) {
-	const content = text || "";
-	const urlRegex = /(https?:\/\/[^\s]+)/g;
-	let lastIndex = 0;
-	let match;
+	const content = escapeHtml(text || "");
+	const withInlineCode = content.replace(/`([^`]+)`/g, "<code>$1</code>");
+	const withBold = withInlineCode.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+	const withItalic = withBold.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+	const withLinks = withItalic.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+	element.innerHTML = withLinks.replace(/\n/g, "<br>");
+}
 
-	while ((match = urlRegex.exec(content)) !== null) {
-		const [url] = match;
-		const start = match.index;
-
-		if (start > lastIndex) {
-			element.appendChild(document.createTextNode(content.slice(lastIndex, start)));
-		}
-
-		const anchor = document.createElement("a");
-		anchor.href = url;
-		anchor.target = "_blank";
-		anchor.rel = "noopener noreferrer";
-		anchor.textContent = url;
-		element.appendChild(anchor);
-
-		lastIndex = start + url.length;
-	}
-
-	if (lastIndex < content.length) {
-		element.appendChild(document.createTextNode(content.slice(lastIndex)));
-	}
+function escapeHtml(value) {
+	return String(value)
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;");
 }
 
 function truncateText(text, maxLength) {
@@ -1105,6 +1233,14 @@ function updateCharCounter(input, counterElement) {
 function autoGrowTextarea(textarea) {
 	textarea.style.height = "auto";
 	textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+}
+
+function applyCompactMode(enabled, buttonElement) {
+	document.body.classList.toggle("compact-mode", !!enabled);
+	safeStorageSet(STORAGE_KEYS.compact, enabled ? "on" : "off");
+	if (buttonElement) {
+		buttonElement.textContent = enabled ? "Compact mode on" : "Compact mode off";
+	}
 }
 
 function formatTime(value) {
