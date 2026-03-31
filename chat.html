@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GpChat | Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="chat-page">
+  <main class="chat-shell">
+    <aside class="chat-sidebar">
+      <div class="brand-block">
+        <p class="eyebrow">Premium Workspace</p>
+        <h1>GpChat</h1>
+      </div>
+
+      <div class="profile-card">
+        <div class="avatar" id="avatarBadge">U</div>
+        <div>
+          <p class="profile-email" id="profileEmail">Loading...</p>
+          <p class="profile-meta">Realtime synced</p>
+        </div>
+      </div>
+
+      <div class="sidebar-panel">
+        <p class="panel-title">Chat Room</p>
+        <p class="panel-value">Global Lounge</p>
+      </div>
+
+      <div class="sidebar-panel">
+        <p class="panel-title">Quick Actions</p>
+        <button class="btn btn-ghost btn-full" id="clearLocalViewBtn" type="button">Clear local view</button>
+        <button class="btn btn-danger btn-full" id="logoutBtn" type="button">Logout</button>
+      </div>
+    </aside>
+
+    <section class="chat-main">
+      <header class="chat-header">
+        <div>
+          <h2>Global Lounge</h2>
+          <p id="liveStatus" class="status-text">Connecting...</p>
+        </div>
+      </header>
+
+      <section id="chat-box" class="chat-feed" aria-live="polite"></section>
+
+      <footer class="composer-wrap">
+        <form id="composerForm" class="composer-form">
+          <textarea id="msg" rows="1" maxlength="1000" placeholder="Share something brilliant..." required></textarea>
+          <button class="btn btn-primary" id="sendBtn" type="submit">Send</button>
+        </form>
+      </footer>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
