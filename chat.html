@@ -24,7 +24,12 @@
 
       <div class="sidebar-panel">
         <p class="panel-title">Chat Room</p>
-        <p class="panel-value">Global Lounge</p>
+        <p class="panel-value" id="activeRoomLabel">Global Lounge</p>
+        <div class="room-list" id="roomList">
+          <button type="button" class="room-pill is-active" data-room="global">Global</button>
+          <button type="button" class="room-pill" data-room="dev">Dev</button>
+          <button type="button" class="room-pill" data-room="random">Random</button>
+        </div>
       </div>
 
       <div class="sidebar-panel">
@@ -44,9 +49,10 @@
     <section class="chat-main">
       <header class="chat-header">
         <div>
-          <h2>Global Lounge</h2>
+          <h2 id="chatRoomHeading">Global Lounge</h2>
           <p id="liveStatus" class="status-text">Connecting...</p>
           <p id="messageStats" class="status-text">0 visible messages</p>
+          <p id="typingStatus" class="status-text"></p>
         </div>
         <div class="chat-toolbar">
           <input id="searchInput" type="search" placeholder="Search messages or people..." aria-label="Search messages">
@@ -70,6 +76,7 @@
         </form>
         <div class="composer-meta">
           <p id="charCounter" class="status-text">0 / 1000</p>
+          <p id="composerHint" class="status-text">Enter to send, Shift+Enter for newline.</p>
           <button class="btn btn-ghost" id="jumpBottomBtn" type="button">Jump to latest</button>
         </div>
       </footer>
