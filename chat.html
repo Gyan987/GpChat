@@ -28,6 +28,13 @@
       </div>
 
       <div class="sidebar-panel">
+        <p class="panel-title">Pinned Notes</p>
+        <div id="pinBoard" class="pin-board">
+          <p class="panel-empty">Pin any message to keep it here.</p>
+        </div>
+      </div>
+
+      <div class="sidebar-panel">
         <p class="panel-title">Quick Actions</p>
         <button class="btn btn-ghost btn-full" id="clearLocalViewBtn" type="button">Clear local view</button>
         <button class="btn btn-danger btn-full" id="logoutBtn" type="button">Logout</button>
@@ -39,16 +46,32 @@
         <div>
           <h2>Global Lounge</h2>
           <p id="liveStatus" class="status-text">Connecting...</p>
+          <p id="messageStats" class="status-text">0 visible messages</p>
+        </div>
+        <div class="chat-toolbar">
+          <input id="searchInput" type="search" placeholder="Search messages or people..." aria-label="Search messages">
+          <label class="toggle-chip" for="mineOnlyToggle">
+            <input id="mineOnlyToggle" type="checkbox">
+            <span>Mine only</span>
+          </label>
+          <button class="btn btn-ghost" id="themeToggleBtn" type="button">Theme</button>
+          <button class="btn btn-ghost" id="soundToggleBtn" type="button">Sound On</button>
         </div>
       </header>
 
-      <section id="chat-box" class="chat-feed" aria-live="polite"></section>
+      <section id="chat-box" class="chat-feed" aria-live="polite">
+        <p id="emptyFeedHint" class="empty-feed-hint">No messages match this filter.</p>
+      </section>
 
       <footer class="composer-wrap">
         <form id="composerForm" class="composer-form">
           <textarea id="msg" rows="1" maxlength="1000" placeholder="Share something brilliant..." required></textarea>
           <button class="btn btn-primary" id="sendBtn" type="submit">Send</button>
         </form>
+        <div class="composer-meta">
+          <p id="charCounter" class="status-text">0 / 1000</p>
+          <button class="btn btn-ghost" id="jumpBottomBtn" type="button">Jump to latest</button>
+        </div>
       </footer>
     </section>
   </main>
